@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG Document Assistant</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 800px;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+            padding: 25px;
+            border: 2px solid #f0f0f0;
+            border-radius: 10px;
+            background: #fafafa;
+        }
+
+        .section h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .upload-area {
+            border: 2px dashed #667eea;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: white;
+        }
+
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f8f8ff;
+        }
+
+        .upload-area.dragover {
+            background: #f0f0ff;
+            border-color: #764ba2;
+        }
+
+        .upload-icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+
+        .upload-text {
+            color: #333;
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+
+        .upload-subtext {
+            color: #999;
+            font-size: 13px;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .file-input {
+            cursor: pointer;
+        }
+
+        .status-message {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 8px;
+            display: none;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .status-message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+
+        .status-message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+
+        .status-message.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+            display: block;
+        }
+
+        .query-section {
+            display: flex;
+            gap: 10px;
+        }
+
+        .query-input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .query-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .results {
+            display: none;
+        }
+
+        .results.show {
+            display: block;
+        }
+
+        .answer-box {
+            background: white;
+            padding: 20px;
+            border-left: 5px solid #667eea;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            line-height: 1.6;
+        }
+
+        .answer-label {
+            color: #667eea;
+            font-weight: 600;
+            margin-bottom: 10px;
+            font-size: 13px;
+            text-transform: uppercase;
+        }
+
+        .sources-box {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .source-item {
+            padding: 12px;
+            background: #f8f8f8;
+            border-left: 4px solid #764ba2;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            font-size: 13px;
+            color: #555;
+            line-height: 1.5;
+        }
+
+        .source-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+
+            .section {
+                padding: 15px;
+            }
+
+            .query-section {
+                flex-direction: column;
+            }
+
+            button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📄 RAG Document Assistant</h1>
+        <p class="subtitle">Upload PDF, Excel, or Word files and ask questions about them</p>
+
+        <!-- Upload Section -->
+        <div class="section">
+            <h2>📤 Upload Document</h2>
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">📎</div>
+                <div class="upload-text">Click to upload or drag and drop</div>
+                <div class="upload-subtext">PDF, Excel, Word (Max 50MB)</div>
+                <input type="file" id="fileInput" class="file-input" 
+                       accept=".pdf,.xlsx,.xls,.docx,.doc">
+            </div>
+            <div class="status-message" id="uploadStatus"></div>
+        </div>
+
+        <!-- Query Section -->
+        <div class="section">
+            <h2>❓ Ask a Question</h2>
+            <div class="query-section">
+                <input type="text" id="queryInput" class="query-input" 
+                       placeholder="Ask something about your document...">
+                <button onclick="submitQuery()" id="queryBtn">Search</button>
+            </div>
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="section results" id="results">
+            <div class="answer-box">
+                <div class="answer-label">Answer</div>
+                <div id="answer"></div>
+            </div>
+            <div class="sources-box">
+                <div class="answer-label">Sources</div>
+                <div id="sources"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const uploadStatus = document.getElementById('uploadStatus');
+        const queryInput = document.getElementById('queryInput');
+        const queryBtn = document.getElementById('queryBtn');
+        const loading = document.getElementById('loading');
+        const results = document.getElementById('results');
+
+        // File upload handlers
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                uploadFile();
+            }
+        });
+
+        fileInput.addEventListener('change', uploadFile);
+
+        function uploadFile() {
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            uploadStatus.textContent = 'Processing file...';
+            uploadStatus.className = 'status-message info';
+
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    uploadStatus.textContent = `✓ ${data.message}`;
+                    uploadStatus.className = 'status-message success';
+                    fileInput.value = '';
+                    queryInput.focus();
+                } else {
+                    uploadStatus.textContent = `✗ Error: ${data.error}`;
+                    uploadStatus.className = 'status-message error';
+                }
+            })
+            .catch(error => {
+                uploadStatus.textContent = `✗ Error: ${error.message}`;
+                uploadStatus.className = 'status-message error';
+            });
+        }
+
+        function submitQuery() {
+            const question = queryInput.value.trim();
+            if (!question) return;
+
+            queryBtn.disabled = true;
+            loading.classList.add('show');
+            results.classList.remove('show');
+
+            fetch('/query', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ question })
+            })
+            .then(response => response.json())
+            .then(data => {
+                loading.classList.remove('show');
+                queryBtn.disabled = false;
+
+                if (data.error) {
+                    uploadStatus.textContent = `✗ Error: ${data.error}`;
+                    uploadStatus.className = 'status-message error';
+                } else {
+                    document.getElementById('answer').textContent = data.answer;
+                    
+                    const sourcesDiv = document.getElementById('sources');
+                    if (data.sources && data.sources.length > 0) {
+                        sourcesDiv.innerHTML = data.sources
+                            .map((source, i) => `<div class="source-item"><strong>Source ${i+1}:</strong> ${source}</div>`)
+                            .join('');
+                    } else {
+                        sourcesDiv.innerHTML = '<div class="source-item">No sources found</div>';
+                    }
+                    
+                    results.classList.add('show');
+                }
+            })
+            .catch(error => {
+                loading.classList.remove('show');
+                queryBtn.disabled = false;
+                uploadStatus.textContent = `✗ Error: ${error.message}`;
+                uploadStatus.className = 'status-message error';
+            });
+        }
+
+        // Allow Enter key in query input
+        queryInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !queryBtn.disabled) {
+                submitQuery();
+            }
+        });
+    </script>
+</body>
+</html>
