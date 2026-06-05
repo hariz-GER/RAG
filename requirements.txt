@@ -2,4 +2,4 @@ pypdf
 python-dotenv
 sentence-transformers
 chromadb
-openai
+google-genai

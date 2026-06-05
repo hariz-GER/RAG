@@ -1,47 +1,28 @@
 import os
 
 from dotenv import load_dotenv
-from openai import OpenAI
+import google.genai as genai
 
 from embedder import Embedder
 from vectorstore import VectorStore
 
 
 def make_answer(question, context):
-    client = OpenAI()
+    api_key = os.getenv("GEMINI_API_KEY")
+    client = genai.Client(api_key=api_key)
+    
+    prompt = f"""Answer using only the provided HR policy context. If the answer is not in the context, say you do not know.
 
-    response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {
-                "role": "system",
-                "content": "Answer using only the provided HR policy context. If the answer is not in the context, say you do not know.",
-            },
-            {
-                "role": "user",
-                "content": f"Context:\n{context}\n\nQuestion: {question}",
-            },
-        ]
+Context:
+{context}
+
+Question: {question}"""
+    
+    response = client.models.generate_content(
+        model="gemini-2.0-flash",
+        contents=prompt,
     )
-
-    return response.choices[0].message.content
-    client = OpenAI()
-
-    response = client.responses.create(
-        model="gpt-4.1-mini",
-        input=[
-            {
-                "role": "system",
-                "content": "Answer using only the provided HR policy context. If the answer is not in the context, say you do not know.",
-            },
-            {
-                "role": "user",
-                "content": f"Context:\n{context}\n\nQuestion: {question}",
-            },
-        ],
-    )
-
-    return response.output_text
+    return response.text
 
 
 def main():
