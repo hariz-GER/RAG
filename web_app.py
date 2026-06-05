@@ -24,22 +24,31 @@ store = VectorStore(collection_name="rag_documents")
 
 
 def make_answer(question, context):
-    """Generate answer using Gemini API"""
+    """Generate answer using Gemini API - Optional"""
     api_key = os.getenv("GEMINI_API_KEY")
-    client = genai.Client(api_key=api_key)
     
-    prompt = f"""Answer using only the provided context. If the answer is not in the context, say you do not know.
+    # If no API key, just return the context as answer
+    if not api_key or api_key == "your_gemini_api_key_here":
+        return context
+    
+    try:
+        client = genai.Client(api_key=api_key)
+        
+        prompt = f"""Answer using only the provided context. If the answer is not in the context, say you do not know.
 
 Context:
 {context}
 
 Question: {question}"""
-    
-    response = client.models.generate_content(
-        model="gemini-2.0-flash",
-        contents=prompt,
-    )
-    return response.text
+        
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=prompt,
+        )
+        return response.text
+    except Exception as e:
+        # If API fails, return context instead
+        return context
 
 
 @app.route('/')
@@ -119,13 +128,13 @@ def query_documents():
         
         if not documents:
             return jsonify({
-                'answer': 'No relevant documents found.',
+                'answer': 'No relevant documents found in the database.',
                 'sources': []
             }), 200
         
         context = "\n\n".join(documents)
         
-        # Generate answer
+        # Generate answer (or just return context if no API key)
         answer = make_answer(question, context)
         
         return jsonify({
@@ -135,13 +144,6 @@ def query_documents():
     
     except Exception as e:
         error_str = str(e)
-        
-        # Handle Gemini API quota exceeded
-        if 'RESOURCE_EXHAUSTED' in error_str or 'quota' in error_str.lower():
-            return jsonify({
-                'error': '⚠️ Gemini API Quota Exceeded\n\nYour free tier limit is exhausted.\n\nSolutions:\n1. Enable PAID BILLING: https://ai.google.dev/ (costs pennies)\n2. Wait for daily reset at midnight UTC (5:30 AM IST)\n3. Check quota: https://ai.dev/rate-limit'
-            }), 429
-        
         return jsonify({'error': f'Error: {error_str}'}), 500
 
 

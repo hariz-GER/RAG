@@ -190,15 +190,28 @@
             border-left: 5px solid #667eea;
             margin-bottom: 20px;
             border-radius: 8px;
-            line-height: 1.6;
+            line-height: 1.8;
+            font-size: 15px;
+        }
+
+        .answer-box #answer {
+            color: #333;
+            word-wrap: break-word;
+            word-break: break-word;
+            white-space: pre-wrap;
+            overflow-wrap: break-word;
+            text-align: justify;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            letter-spacing: 0.3px;
         }
 
         .answer-label {
             color: #667eea;
             font-weight: 600;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
             font-size: 13px;
             text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
         .sources-box {
@@ -208,14 +221,18 @@
         }
 
         .source-item {
-            padding: 12px;
+            padding: 15px;
             background: #f8f8f8;
             border-left: 4px solid #764ba2;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
             border-radius: 4px;
-            font-size: 13px;
-            color: #555;
-            line-height: 1.5;
+            font-size: 14px;
+            color: #444;
+            line-height: 1.7;
+            word-wrap: break-word;
+            word-break: break-word;
+            white-space: pre-wrap;
+            overflow-wrap: break-word;
         }
 
         .source-item:last-child {
@@ -399,12 +416,34 @@
                     uploadStatus.textContent = `✗ Error: ${data.error}`;
                     uploadStatus.className = 'status-message error';
                 } else {
-                    document.getElementById('answer').textContent = data.answer;
+                    // Format the answer with proper spacing and paragraphs
+                    let formattedAnswer = data.answer;
+                    
+                    // Add proper spacing and formatting
+                    formattedAnswer = formattedAnswer
+                        .split('\n\n').join('\n\n')  // Preserve double line breaks
+                        .trim();
+                    
+                    // If answer doesn't have line breaks, try to format it better
+                    if (!formattedAnswer.includes('\n')) {
+                        // Split by periods and rejoin with line breaks for readability
+                        formattedAnswer = formattedAnswer
+                            .replace(/([.!?])\s+/g, '$1\n\n')
+                            .trim();
+                    }
+                    
+                    document.getElementById('answer').textContent = formattedAnswer;
                     
                     const sourcesDiv = document.getElementById('sources');
                     if (data.sources && data.sources.length > 0) {
                         sourcesDiv.innerHTML = data.sources
-                            .map((source, i) => `<div class="source-item"><strong>Source ${i+1}:</strong> ${source}</div>`)
+                            .map((source, i) => {
+                                // Format source text
+                                const formattedSource = source
+                                    .replace(/([.!?])\s+/g, '$1\n')
+                                    .trim();
+                                return `<div class="source-item"><strong>Source ${i+1}:</strong>\n${formattedSource}</div>`;
+                            })
                             .join('');
                     } else {
                         sourcesDiv.innerHTML = '<div class="source-item">No sources found</div>';
