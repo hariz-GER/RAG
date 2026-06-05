@@ -10,6 +10,23 @@ from vectorstore import VectorStore
 def make_answer(question, context):
     client = OpenAI()
 
+    response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {
+                "role": "system",
+                "content": "Answer using only the provided HR policy context. If the answer is not in the context, say you do not know.",
+            },
+            {
+                "role": "user",
+                "content": f"Context:\n{context}\n\nQuestion: {question}",
+            },
+        ]
+    )
+
+    return response.choices[0].message.content
+    client = OpenAI()
+
     response = client.responses.create(
         model="gpt-4.1-mini",
         input=[
