@@ -3,6 +3,7 @@ from flask import Flask, render_template, request, jsonify
 from dotenv import load_dotenv
 import google.genai as genai
 
+from answer_utils import concise_fallback, limit_answer
 from embedder import Embedder
 from vectorstore import VectorStore
 from chunker import Chunker
@@ -24,31 +25,40 @@ store = VectorStore(collection_name="rag_documents")
 
 
 def make_answer(question, context):
-    """Generate answer using Gemini API - Optional"""
+    """Generate only the answer requested by the user."""
     api_key = os.getenv("GEMINI_API_KEY")
     
-    # If no API key, just return the context as answer
+    # Never expose the full retrieved document when Gemini is unavailable.
     if not api_key or api_key == "your_gemini_api_key_here":
-        return context
+        return concise_fallback(question, context)
     
     try:
         client = genai.Client(api_key=api_key)
         
-        prompt = f"""Answer using only the provided context. If the answer is not in the context, say you do not know.
+        prompt = f"""You answer questions using only the provided document context.
+
+Rules:
+- Return only the exact information requested by the question.
+- Never summarize the document or include unrelated details.
+- For a skills question, return only a comma-separated list of skills.
+- Use at most 3 short sentences.
+- If the answer is absent, reply exactly: I do not know based on the provided document.
 
 Context:
 {context}
 
-Question: {question}"""
+Question: {question}
+
+Direct answer:"""
         
         response = client.models.generate_content(
             model="gemini-2.0-flash",
             contents=prompt,
         )
-        return response.text
+        return limit_answer(response.text)
     except Exception as e:
-        # If API fails, return context instead
-        return context
+        app.logger.warning("Gemini answer generation failed: %s", e)
+        return concise_fallback(question, context)
 
 
 @app.route('/')
@@ -139,7 +149,8 @@ def query_documents():
         
         return jsonify({
             'answer': answer,
-            'sources': documents[:3]  # Return top 3 sources
+            # Do not print retrieved resume chunks beneath the focused answer.
+            'sources': []
         }), 200
     
     except Exception as e:
